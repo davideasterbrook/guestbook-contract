@@ -1,0 +1,277 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import {Test, console2} from "forge-std/Test.sol";
+import {Guestbook} from "../src/Guestbook.sol";
+
+contract MockLayerZeroEndpoint {
+    struct PendingMessage {
+        uint32 srcEid;
+        uint32 dstEid;
+        bytes message;
+        address dstAddress;
+    }
+    
+    mapping(uint32 => address) public endpoints;
+    mapping(address => address) public delegates;
+    PendingMessage[] public pendingMessages;
+    
+    function pendingMessagesLength() external view returns (uint256) {
+        return pendingMessages.length;
+    }
+    
+    uint32 public currentEid;
+    
+    constructor(uint32 _eid) {
+        currentEid = _eid;
+        endpoints[_eid] = address(this);
+    }
+    
+    function setDelegate(address _delegate) external {
+        delegates[msg.sender] = _delegate;
+    }
+    
+    function setPeer(uint32 _eid, bytes32 _peer) external {
+        // Mock setPeer functionality
+    }
+    
+    function quote(
+        uint32, // _dstEid
+        bytes calldata, // _message
+        bytes calldata, // _options
+        bool // _payInLzToken
+    ) external pure returns (uint256 nativeFee, uint256 lzTokenFee) {
+        return (0.001 ether, 0);
+    }
+    
+    function send(
+        uint32 _dstEid,
+        bytes calldata _message,
+        bytes calldata, // _options
+        uint256, // _nativeFee
+        address // _refundAddress
+    ) external payable returns (bytes32 guid, uint64 nonce) {
+        // Store message for later delivery
+        pendingMessages.push(PendingMessage({
+            srcEid: currentEid,
+            dstEid: _dstEid,
+            message: _message,
+            dstAddress: msg.sender
+        }));
+        
+        return (keccak256(abi.encode(_message, block.timestamp)), 1);
+    }
+    
+    function deliverMessages(MockLayerZeroEndpoint _dstEndpoint) external {
+        for (uint i = 0; i < pendingMessages.length; i++) {
+            PendingMessage memory pending = pendingMessages[i];
+            if (pending.dstEid == _dstEndpoint.currentEid()) {
+                _dstEndpoint.deliverMessage(
+                    pending.srcEid,
+                    pending.dstAddress,
+                    pending.message
+                );
+            }
+        }
+        // Clear delivered messages
+        delete pendingMessages;
+    }
+    
+    function deliverMessage(
+        uint32 _srcEid,
+        address _dstAddress,
+        bytes calldata _message
+    ) external {
+        // Find the corresponding guestbook contract on this chain
+        Guestbook(_dstAddress).lzReceive(
+            _srcEid,
+            keccak256("mock_guid"),
+            _message,
+            msg.sender,
+            ""
+        );
+    }
+}
+
+contract MultiChainTest is Test {
+    Guestbook public guestbook1; // Chain 1337 (Ethereum)
+    Guestbook public guestbook2; // Chain 1338 (Arbitrum)
+    
+    MockLayerZeroEndpoint public endpoint1;
+    MockLayerZeroEndpoint public endpoint2;
+    
+    address public owner = address(this);
+    address public user1 = address(0x1);
+    address public user2 = address(0x2);
+    
+    function setUp() public {
+        // Create endpoints for each chain
+        endpoint1 = new MockLayerZeroEndpoint(1337);
+        endpoint2 = new MockLayerZeroEndpoint(1338);
+        
+        // Deploy guestbooks on each chain
+        guestbook1 = new Guestbook(
+            address(endpoint1),
+            owner
+        );
+        
+        guestbook2 = new Guestbook(
+            address(endpoint2),
+            owner
+        );
+        
+        // Set up cross-chain peers (in real LayerZero this would be done via setPeer)
+        // This is mocked in our test environment
+    }
+    
+    function testLocalSignatures() public {
+        // Test signing on chain 1
+        vm.prank(user1);
+        guestbook1.signGuestbook("Alice", "Hello from Chain 1337!");
+        
+        assertEq(guestbook1.getTotalSignatures(), 1);
+        assertEq(guestbook1.getChainSignatureCount(1337), 1);
+        assertEq(guestbook2.getTotalSignatures(), 0);
+        
+        // Test signing on chain 2
+        vm.prank(user2);
+        guestbook2.signGuestbook("Bob", "Hello from Chain 1338!");
+        
+        assertEq(guestbook1.getTotalSignatures(), 1);
+        assertEq(guestbook2.getTotalSignatures(), 1);
+        assertEq(guestbook2.getChainSignatureCount(1338), 1);
+    }
+    
+    function testCrossChainMessageStructure() public {
+        // Test that sendSignature creates the right message structure
+        vm.prank(user1);
+        vm.deal(user1, 1 ether);
+        
+        // This should create a pending message in endpoint1
+        guestbook1.sendSignature{value: 0.001 ether}(
+            1338, // destination chain
+            "Alice", 
+            "Cross-chain hello!",
+            "" // empty options
+        );
+        
+        // Check that message was created
+        assertEq(endpoint1.pendingMessagesLength(), 1);
+        
+        // Check local state
+        assertEq(guestbook1.getTotalSignatures(), 1);
+        assertEq(guestbook2.getTotalSignatures(), 0);
+    }
+    
+    function testSimulatedCrossChainDelivery() public {
+        vm.prank(user1);
+        vm.deal(user1, 1 ether);
+        
+        // Send message from chain 1337 to 1338
+        guestbook1.sendSignature{value: 0.001 ether}(
+            1338,
+            "Alice",
+            "Cross-chain signature!",
+            ""
+        );
+        
+        // Verify local signature was created
+        assertEq(guestbook1.getTotalSignatures(), 1);
+        assertEq(guestbook2.getTotalSignatures(), 0);
+        
+        Guestbook.Signature memory localSig = guestbook1.getSignature(1);
+        assertEq(localSig.signer, user1);
+        assertEq(localSig.sourceChainId, 1337);
+        assertEq(localSig.name, "Alice");
+        assertEq(localSig.message, "Cross-chain signature!");
+        
+        // Simulate cross-chain message delivery
+        endpoint1.deliverMessages(endpoint2);
+        
+        // Now check that the message was received on chain 2
+        assertEq(guestbook2.getTotalSignatures(), 1);
+        
+        Guestbook.Signature memory remoteSig = guestbook2.getSignature(1);
+        assertEq(remoteSig.signer, user1);
+        assertEq(remoteSig.sourceChainId, 1337); // Should show origin chain
+        assertEq(remoteSig.name, "Alice");
+        assertEq(remoteSig.message, "Cross-chain signature!");
+        
+        // Check chain-specific counters
+        assertEq(guestbook1.getChainSignatureCount(1337), 1);
+        assertEq(guestbook2.getChainSignatureCount(1337), 1); // Remote signature from 1337
+    }
+    
+    function testBidirectionalCrossChain() public {
+        vm.deal(user1, 1 ether);
+        vm.deal(user2, 1 ether);
+        
+        // User1 signs from chain 1337 to 1338
+        vm.prank(user1);
+        guestbook1.sendSignature{value: 0.001 ether}(
+            1338,
+            "Alice",
+            "From Ethereum to Arbitrum",
+            ""
+        );
+        
+        // User2 signs from chain 1338 to 1337
+        vm.prank(user2);
+        guestbook2.sendSignature{value: 0.001 ether}(
+            1337,
+            "Bob", 
+            "From Arbitrum to Ethereum",
+            ""
+        );
+        
+        // Deliver messages
+        endpoint1.deliverMessages(endpoint2);
+        endpoint2.deliverMessages(endpoint1);
+        
+        // Both chains should have 2 signatures each (1 local + 1 remote)
+        assertEq(guestbook1.getTotalSignatures(), 2);
+        assertEq(guestbook2.getTotalSignatures(), 2);
+        
+        // Check user signatures
+        uint256[] memory user1Sigs1 = guestbook1.getUserSignatures(user1);
+        uint256[] memory user2Sigs2 = guestbook2.getUserSignatures(user2);
+        
+        assertEq(user1Sigs1.length, 1); // User1 has 1 signature on chain 1
+        assertEq(user2Sigs2.length, 1); // User2 has 1 signature on chain 2
+        
+        // Verify cross-chain signature details
+        Guestbook.Signature memory sig1on2 = guestbook2.getSignature(1);
+        assertEq(sig1on2.sourceChainId, 1337);
+        assertEq(sig1on2.signer, user1);
+        
+        Guestbook.Signature memory sig2on1 = guestbook1.getSignature(2);
+        assertEq(sig2on1.sourceChainId, 1338);
+        assertEq(sig2on1.signer, user2);
+    }
+    
+    function testChainSignatureCounts() public {
+        vm.deal(user1, 1 ether);
+        
+        // Multiple signatures from different chains
+        vm.prank(user1);
+        guestbook1.signGuestbook("Local", "Local message");
+        
+        vm.prank(user1);
+        guestbook1.sendSignature{value: 0.001 ether}(
+            1338,
+            "Cross",
+            "Cross-chain message",
+            ""
+        );
+        
+        endpoint1.deliverMessages(endpoint2);
+        
+        // Chain 1337 should have 2 signatures from chain 1337
+        assertEq(guestbook1.getChainSignatureCount(1337), 2);
+        assertEq(guestbook1.getChainSignatureCount(1338), 0);
+        
+        // Chain 1338 should have 1 signature from chain 1337
+        assertEq(guestbook2.getChainSignatureCount(1337), 1);
+        assertEq(guestbook2.getChainSignatureCount(1338), 0);
+    }
+}

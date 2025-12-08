@@ -1,0 +1,24 @@
+# Compiler files
+cache/
+out/
+
+# Ignores all broadcast logs (deployment transaction history)
+broadcast/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Frontend (not part of production smart contract focus)
+frontend/
+
+# Subgraph (not part of production smart contract focus)
+subgraph/
+
+# Deployment artifacts (testnet addresses, should not be in repo)
+deployments.json
+
+# Claude Code
+.claude/
