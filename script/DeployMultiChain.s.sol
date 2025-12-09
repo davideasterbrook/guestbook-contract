@@ -41,9 +41,12 @@ contract DeployMultiChainScript is Script {
 
     // ========== EDIT THIS: Active chains to deploy ==========
     string[] public ACTIVE_CHAINS = [
-        "sepolia",
-        "base_sepolia",
-        "arbitrum_sepolia"
+        // "sepolia",
+        // "base_sepolia",
+        // "arbitrum_sepolia"
+        "ethereum",
+        "base",
+        "arbitrum"
     ];
     // ========================================================
 
@@ -331,7 +334,7 @@ contract DeployMultiChainScript is Script {
     /**
      * @notice Helper to display deployment info
      */
-    function showDeployments() public {
+    function showDeployments() public view {
         string memory deploymentsJson = vm.readFile(DEPLOYMENTS_FILE);
 
         console2.log("=== Deployed Contracts ===\n");

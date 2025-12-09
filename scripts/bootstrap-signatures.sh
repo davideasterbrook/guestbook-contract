@@ -37,9 +37,11 @@ if [ -n "$NETWORK" ]; then
 elif [ -z "$DEPLOY_NETWORK" ]; then
     echo -e "${RED}Error: No network specified${NC}"
     echo "Usage: $0 [bootstrap_file.csv] [network] [dry_run]"
-    echo "Example: $0 bootstrap.csv sepolia"
+    echo "Example: $0 bootstrap.csv ethereum"
     echo ""
-    echo "Available networks: sepolia, base_sepolia, arbitrum_sepolia"
+    echo "Available networks:"
+    echo "  Testnets: sepolia, base_sepolia, arbitrum_sepolia"
+    echo "  Mainnets: ethereum, base, arbitrum"
     exit 1
 fi
 
@@ -60,6 +62,15 @@ case "$DEPLOY_NETWORK" in
         ;;
     arbitrum_sepolia)
         RPC_URL="$ARB_SEPOLIA_RPC_URL"
+        ;;
+    ethereum)
+        RPC_URL="$ETHEREUM_RPC_URL"
+        ;;
+    base)
+        RPC_URL="$BASE_RPC_URL"
+        ;;
+    arbitrum)
+        RPC_URL="$ARBITRUM_RPC_URL"
         ;;
     *)
         echo -e "${RED}Error: Unknown DEPLOY_NETWORK: $DEPLOY_NETWORK${NC}"

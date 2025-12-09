@@ -127,6 +127,15 @@ forge script script/DeployMultiChain.s.sol:DeployMultiChainScript \
 
 Shows all deployed addresses and their bytes32 representations.
 
+### Step 5: Verify Contracts
+
+**Verify contracts** on block explorers:
+Update .env with GUESTBOOK_ADDRESS
+```bash
+source .env
+forge verify-contract $GUESTBOOK_ADDRESS Guestbook --chain sepolia
+```
+
 ## Testing Cross-Chain Messages
 
 ### 1. Get Quote for Broadcasting
@@ -217,7 +226,7 @@ Shows message status, delivery time, and any errors.
 
 ```bash
 # Default usage with bootstrap.csv
-./script/bootstrap-signatures.sh
+./scripts/bootstrap-signatures.sh
 
 # Custom file
 ./scripts/bootstrap-signatures.sh my-custom.csv
@@ -280,16 +289,3 @@ source .env
 # or
 export SEPOLIA_RPC_URL=...
 ```
-
-## Next Steps
-
-After successful deployment:
-
-TODO: Add bootstrap signatures
-
-
-1. **Verify contracts** on block explorers:
-   ```bash
-   forge verify-contract <ADDRESS> Guestbook --chain sepolia
-   ```
-

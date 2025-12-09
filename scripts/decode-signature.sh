@@ -68,5 +68,3 @@ echo ""
 # Count LayerZero PacketSent events
 PACKETS=$(echo $RECEIPT | jq '[.logs[] | select(.topics[0] == "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f")] | length')
 echo "📤 Cross-chain messages sent: $PACKETS"
-echo ""
-echo "🔍 Track delivery: https://testnet.layerzeroscan.com/tx/$TX_HASH"
