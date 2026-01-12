@@ -8,9 +8,9 @@ A pure event-based, multi-chain guestbook using LayerZero v2 for cross-chain mes
 # TODO update
 | Chain | Network | Contract Address | Explorer |
 |-------|---------|------------------|----------|
-| Ethereum | Mainnet | `0xEf1ABFcD0413CA9eFcfFAC2079257A1572058Ade` | [View](https://sepolia.etherscan.io/address/0xEf1ABFcD0413CA9eFcfFAC2079257A1572058Ade) |
-| Base | Mainnet | `0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5` | [View](https://sepolia.basescan.org/address/0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5) |
-| Arbitrum | Mainnet | `0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5` | [View](https://sepolia.arbiscan.io/address/0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5) |
+| Ethereum | Mainnet | `0xEf1ABFcD0413CA9eFcfFAC2079257A1572058Ade` | [View](https://etherscan.io/address/0xEf1ABFcD0413CA9eFcfFAC2079257A1572058Ade) |
+| Base | Mainnet | `0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5` | [View](https://basescan.org/address/0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5) |
+| Arbitrum | Mainnet | `0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5` | [View](https://arbiscan.io/address/0xe14942066fE9d1cbFa8a343C7A8B7d38F6B9B0f5) |
 | Ethereum | Sepolia | `0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67` | [View](https://sepolia.etherscan.io/address/0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67) |
 | Base | Sepolia | `0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67` | [View](https://sepolia.basescan.org/address/0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67) |
 | Arbitrum | Sepolia | `0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67` | [View](https://sepolia.arbiscan.io/address/0x7144AE87f605dB2Aa94Fd32cF3F72Ee0291c6C67) |
